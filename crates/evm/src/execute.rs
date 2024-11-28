@@ -174,9 +174,9 @@ pub trait BlockExecutorProvider: Send + Sync + Clone + Unpin + 'static {
 
 /// Helper type for the output of executing a block.
 #[derive(Debug, Clone)]
-pub struct ExecuteOutput {
+pub struct ExecuteOutput<T> {
     /// Receipts obtained after executing a block.
-    pub receipts: Vec<Receipt>,
+    pub receipts: Vec<T>,
     /// Cumulative gas used in the block execution.
     pub gas_used: u64,
 }
@@ -204,7 +204,7 @@ where
         &mut self,
         block: &BlockWithSenders,
         total_difficulty: U256,
-    ) -> Result<ExecuteOutput, Self::Error>;
+    ) -> Result<ExecuteOutput<Receipt>, Self::Error>;
 
     /// Applies any necessary changes after executing the block's transactions.
     fn apply_post_execution_changes(
@@ -345,7 +345,7 @@ where
         let BlockExecutionInput { block, total_difficulty } = input;
 
         self.strategy.apply_pre_execution_changes(block, total_difficulty)?;
-        let ExecuteOutput { receipts, gas_used } =
+        let ExecuteOutput::<Receipt> { receipts, gas_used } =
             self.strategy.execute_transactions(block, total_difficulty)?;
         let requests =
             self.strategy.apply_post_execution_changes(block, total_difficulty, &receipts)?;
@@ -365,7 +365,7 @@ where
         let BlockExecutionInput { block, total_difficulty } = input;
 
         self.strategy.apply_pre_execution_changes(block, total_difficulty)?;
-        let ExecuteOutput { receipts, gas_used } =
+        let ExecuteOutput::<Receipt> { receipts, gas_used } =
             self.strategy.execute_transactions(block, total_difficulty)?;
         let requests =
             self.strategy.apply_post_execution_changes(block, total_difficulty, &receipts)?;
@@ -390,7 +390,7 @@ where
         self.strategy.with_state_hook(Some(Box::new(state_hook)));
 
         self.strategy.apply_pre_execution_changes(block, total_difficulty)?;
-        let ExecuteOutput { receipts, gas_used } =
+        let ExecuteOutput::<Receipt> { receipts, gas_used } =
             self.strategy.execute_transactions(block, total_difficulty)?;
         let requests =
             self.strategy.apply_post_execution_changes(block, total_difficulty, &receipts)?;
@@ -444,7 +444,7 @@ where
         }
 
         self.strategy.apply_pre_execution_changes(block, total_difficulty)?;
-        let ExecuteOutput { receipts, .. } =
+        let ExecuteOutput::<Receipt> { receipts, .. } =
             self.strategy.execute_transactions(block, total_difficulty)?;
         let requests =
             self.strategy.apply_post_execution_changes(block, total_difficulty, &receipts)?;
@@ -583,14 +583,14 @@ mod tests {
         _chain_spec: Arc<ChainSpec>,
         _evm_config: EvmConfig,
         state: State<DB>,
-        execute_transactions_result: ExecuteOutput,
+        execute_transactions_result: ExecuteOutput<Receipt>,
         apply_post_execution_changes_result: Requests,
         finish_result: BundleState,
     }
 
     #[derive(Clone)]
     struct TestExecutorStrategyFactory {
-        execute_transactions_result: ExecuteOutput,
+        execute_transactions_result: ExecuteOutput<Receipt>,
         apply_post_execution_changes_result: Requests,
         finish_result: BundleState,
     }
@@ -640,7 +640,7 @@ mod tests {
             &mut self,
             _block: &BlockWithSenders,
             _total_difficulty: U256,
-        ) -> Result<ExecuteOutput, Self::Error> {
+        ) -> Result<ExecuteOutput<Receipt>, Self::Error> {
             Ok(self.execute_transactions_result.clone())
         }
 
